@@ -571,6 +571,7 @@ func printSlice(sliceStrings *[]string) {
 		fmt.Printf("%d\n", value)
 	}
 
+	// https://www.cloudhadoop.com/golang-print-array-slice-values/
 	// %v - value in default format ie [one two three]
 	// %+v - Value in default format + Displays sign for numerics - [one two three]
 	// %#v - Data values in Go Styles - []string{“one”, “two”, “three”}
