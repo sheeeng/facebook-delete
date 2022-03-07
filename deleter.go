@@ -4,17 +4,19 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/AlecAivazis/survey/v2"
-	"github.com/cheggaaa/pb/v3"
-	"github.com/juju/persistent-cookiejar"
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"os"
 	"sort"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/AlecAivazis/survey/v2"
+	"github.com/cheggaaa/pb/v3"
+	cookiejar "github.com/juju/persistent-cookiejar"
 )
 
 const numRoutines int = 5
@@ -23,8 +25,17 @@ const facebookLoginURL string = "https://mbasic.facebook.com/login/device-based/
 const profileURL string = "https://mbasic.facebook.com/profile"
 const activityURL string = "https://mbasic.facebook.com/<profileid>/allactivity"
 
-var yearOptions = []string{"2022", "2021", "2020", "2019", "2018", "2017", "2016", "2015", "2014", "2013", "2012", "2011", "2010", "2009", "2008", "2007", "2006"}
-var monthStrings = []string{"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"}
+var yearOptions = []string{
+	"2022", "2021",
+	"2020", "2019", "2018", "2017", "2016", "2015", "2014", "2013", "2012", "2011",
+	"2010", "2009", "2008", "2007", "2006",
+}
+var monthStrings = []string{
+	"Jan", "Feb", "Mar",
+	"Apr", "May", "Jun",
+	"Jul", "Aug", "Sep",
+	"Oct", "Nov", "Dec",
+}
 var categoriesMap = map[string]string{
 	"Comments":                       "commentscluster",
 	"Posts":                          "statuscluster",
@@ -48,6 +59,10 @@ var tokensInURLs = [...]string{"/removecontent", "/delete", "/report", "/events/
 var rateLimit int
 var limitSearch bool
 var limitDelete bool
+
+var yearsArgument []string
+var monthsArgument []string
+var categoriesArgument []string
 
 type requester struct {
 	client *http.Client
@@ -503,11 +518,22 @@ func (del *deleter) DeleteElement(elem *deleteElement) {
 	}
 }
 
+func hasElement(s []string, str string) bool {
+	for _, v := range s {
+		if v == str {
+			return true
+		}
+	}
+	return false
+}
+
 func main() {
 	flag.IntVar(&rateLimit, "rateLimit", 0, "Wait this many milliseconds between requests.")
 	flag.BoolVar(&limitSearch, "limitSearch", true, "Rate-limit searching for things to delete.")
 	flag.BoolVar(&limitDelete, "limitDelete", true, "Rate-limit deleting things.")
+
 	flag.Parse()
+
 	if rateLimit > 0 {
 		if limitSearch && limitDelete {
 			fmt.Printf("Waiting %d ms before search and delete requests.\n", rateLimit)
@@ -523,10 +549,35 @@ func main() {
 	actRead := activityReader{req, fbl, make([]deleteElement, 0), make([]string, 0)}
 
 	years := createMultiSelect("years", yearOptions)
+	printSlice(&years)
+
 	months := createMultiSelect("months", monthStrings)
+	printSlice(&months)
+
 	actRead.selectedMonths = months
 	categories := createMultiSelect("categories", categorySlice())
+	printSlice(&categories)
+
+	os.Exit(42)
 
 	del := deleter{&actRead, req}
 	del.Delete(years, categories)
+}
+
+func printSlice(sliceStrings *[]string) {
+	// fmt.Printf("Options Type: %T\n", sliceStrings)
+
+	for _, value := range *sliceStrings {
+		fmt.Printf("%d\n", value)
+	}
+
+	// %v - value in default format ie [one two three]
+	// %+v - Value in default format + Displays sign for numerics - [one two three]
+	// %#v - Data values in Go Styles - []string{“one”, “two”, “three”}
+	// %+q - For Numerics, Displays ASCII code - ['\x01' ‘\x02’ ‘\x03’ ‘\x05’ ‘\f’], Others default format - [“one” “two” “three”]
+
+	fmt.Printf("%v\n", sliceStrings)
+	fmt.Printf("%+v\n", sliceStrings)
+	fmt.Printf("%#v\n", sliceStrings)
+	fmt.Printf("%+q\n", sliceStrings)
 }
